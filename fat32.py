@@ -23,32 +23,32 @@ class FAT32:
         root.name = '/'
         root.start_cl_no = self.br.root_cluster_no
         root.size = 0
-        root.children = self.make_child(root)
+        self.save_child(root)
         print(root.name)
-        self.search(root.children)  
+        self.search(root)  
     
-    def make_child(self, den):
-        dentries = self.gather([den.start_cl_no])
-        dentry_cnt = len(dentries) // 0x20
+    def save_child(self, node):
+        blocks = self.gather([node.start_cl_no])
+        cnt = len(blocks) // 0x20
         c = []
-        for i in range(dentry_cnt):
-            bf = dentries[0x20*i : 0x20*(i+1)] 
+        for i in range(cnt):
+            bf = blocks[0x20*i : 0x20*(i+1)] 
             child = Node(bf)
             c.append(child)
-        return c
-        
-    def search(self, children):
-        for den in children:
-            if not den.is_valid or den.is_empty: 
+        node.children = c
+               
+    def search(self, node):
+        for node in node.children:
+            if not node.is_valid or node.is_empty: 
                 continue
-            elif den.is_dir:
+            elif node.is_dir:
                 print('\nthis is directory')
-                print(den.name)
-                den.children = self.make_child(den)
-                self.search(den.children)
-            elif den.is_file:
+                print(node.name)
+                self.save_child(node)
+                self.search(node)
+            elif node.is_file:
                 print('\nthis is file')
-                self.make_file(den)
+                self.make_file(node)
             else:
                 print('\ninvalid')
 
