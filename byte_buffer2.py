@@ -17,7 +17,7 @@ class ByteBuffer2:
     def size(self):
         return len(self.m_data)
 
-    def limit(self): # size()랑 똑같은데 왜 필요한가
+    def limit(self): 
         return len(self.m_data)
 
     @property
