@@ -1,7 +1,7 @@
 from byte_buffer2 import *
 from br import *
+from dentry import *
 from fat_area import *
-from node import *
 
 class FAT32:
     def __init__(self): 
@@ -17,23 +17,21 @@ class FAT32:
         b1 = self.file.read(self.br.fat_area_size)
         self.fat = FatArea(b1)
 
-        # root node
-        root = Node()
-        root.attr = 0x10
-        root.name = '/'
+        # dentry
+        bf = b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+        root = Dentry(bf)
         root.start_cl_no = self.br.root_cluster_no
-        root.size = 0
-        root.children = self.make_child(root)
-        print(root.name)
-        self.search(root.children)  
+        c = self.save_child(root)
+        self.search(c)  # 루트 디렉토리 처리를 좀 더 깔끔하게 하고싶음.. 저렇게 조작해도 되나..
     
-    def make_child(self, den):
+    def save_child(self, den):
+        print(f"start cluster num : {hex(den.start_cl_no)}")
         dentries = self.gather([den.start_cl_no])
         dentry_cnt = len(dentries) // 0x20
         c = []
         for i in range(dentry_cnt):
             bf = dentries[0x20*i : 0x20*(i+1)] 
-            child = Node(bf)
+            child = Dentry(bf)
             c.append(child)
         return c
         
@@ -44,8 +42,9 @@ class FAT32:
             elif den.is_dir:
                 print('\nthis is directory')
                 print(den.name)
-                den.children = self.make_child(den)
+                den.children = self.save_child(den)
                 self.search(den.children)
+                
             elif den.is_file:
                 print('\nthis is file')
                 self.make_file(den)
@@ -54,8 +53,7 @@ class FAT32:
 
     def make_file(self, den):
         clusters = self.fat.get_clusters(den.start_cl_no) 
-        fcontent = self.gather(clusters)
-        fcontent = fcontent[:den.size]
+        fcontent = self.gather(clusters)     
         f = open(den.name, "wb")
         f.write(fcontent)
         f.close()

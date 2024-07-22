@@ -2,9 +2,12 @@ from byte_buffer2 import *
 from br import *
 import datetime
 
-class Dentry:
-    def __init__(self, buffer):
-        bb = ByteBuffer2(buffer)
+class Node:
+    def __init__(self, *buffer):
+        if len(buffer) == 0:
+            return
+        
+        bb = ByteBuffer2(buffer[0])
         self.children = []
         
         # attr 0xb
@@ -32,8 +35,17 @@ class Dentry:
         n1 = n1 << 16
         bb.offset = 0x1a
         self.start_cl_no = n1 + bb.get_uint2_le()
-   
-               
+         
+        # date_time 0x0e~12      
+        bb.offset = 0x0e
+        dt = bb.get_uint4_le()
+        self.date_time = datetime.datetime.fromtimestamp(dt)
+        
+        # size 0x0c~f
+        bb.offset = 0x1c
+        self.size = bb.get_uint4_le()
+    
+    
     def set_type(self):
         self.is_empty = (self.attr == 0x00)  
         self.is_dir = (self.attr == 0x10)
@@ -46,17 +58,18 @@ class Dentry:
      
      
      
-def print_dentry(file, addr):
-    file.seek(addr)  #DIR1
+def print_node(file, addr):
+    file.seek(addr)
     buffer = file.read(0x20) 
-    d1 = Dentry(buffer)
-    if d1.is_valid:
-        print(d1.name)
-        print(d1.start_cl_no)
+    n = Node(buffer)
+    if n.is_valid:
+        print(n.name)
+        print(n.start_cl_no)
+        print(n.date_time)
 
 if __name__ == "__main__":
     path = '../fat/FAT32_simple.mdf' 
     file = open(path, 'rb')
-    print_dentry(file, 0x404040)
-    print_dentry(file, 0x400080)
+    print_node(file, 0x404040)
+    print_node(file, 0x400080)
     
