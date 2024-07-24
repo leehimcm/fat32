@@ -1,6 +1,7 @@
 from byte_buffer2 import *
 from br import *
 from fat_area import *
+from dentry import *
 from node import *
 
 class FAT32:
@@ -17,14 +18,13 @@ class FAT32:
         b1 = self.file.read(self.br.fat_area_size)
         self.fat = FatArea(b1)
 
-        # root node
+        # root
         root = Node()
-        root.attr = 0x10
+        root.is_dir = True
         root.name = '/'
         root.start_cl_no = self.br.root_cluster_no
         root.size = 0
         self.save_child(root)
-        print(root.name)
         self.search(root)  
     
     def save_child(self, node):
@@ -33,13 +33,15 @@ class FAT32:
         c = []
         for i in range(cnt):
             bf = blocks[0x20*i : 0x20*(i+1)] 
-            child = Node(bf)
-            c.append(child)
-        node.children = c
+            den = Dentry(bf)
+            if den.is_valid:
+                c_node = Node(den)
+                c.append(c_node)
+        node.node_list = c
                
     def search(self, node):
-        for node in node.children:
-            if not node.is_valid or node.is_empty: 
+        for node in node.node_list:
+            if not node.is_valid or node.is_empty:
                 continue
             elif node.is_dir:
                 print('\nthis is directory')
