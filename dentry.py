@@ -3,8 +3,10 @@ from br import *
 import datetime
 
 class Dentry:
-    def __init__(self, buffer):
-        bb = ByteBuffer2(buffer)
+    def __init__(self, *buffer):
+        if len(buffer) == 0:
+            return
+        bb = ByteBuffer2(buffer[0])
         
         # attr 0xb
         bb.offset = 0x0b

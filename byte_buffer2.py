@@ -77,7 +77,7 @@ class ByteBuffer2:
             e = self.m_offset + size
             res = self.m_data[s:e].decode('utf-8')
         except Exception as e:
-            res = ""
+            res = "?"
         finally:
             self.m_offset += size
 

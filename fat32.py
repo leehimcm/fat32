@@ -6,7 +6,7 @@ from node import *
 
 class FAT32:
     def __init__(self): 
-        path = '../fat/FAT32_simple.mdf' 
+        path = '../fat/FAT32_simple.mdf'
         self.file = open(path, 'rb')
         
         # bootrecord
@@ -19,40 +19,62 @@ class FAT32:
         self.fat = FatArea(b1)
 
         # root
-        root = Node()
+        root = Dentry()
         root.is_dir = True
         root.name = '/'
         root.start_cl_no = self.br.root_cluster_no
         root.size = 0
-        self.save_child(root)
-        self.search(root)  
-    
-    def save_child(self, node):
-        blocks = self.gather([node.start_cl_no])
-        cnt = len(blocks) // 0x20
-        c = []
-        for i in range(cnt):
-            bf = blocks[0x20*i : 0x20*(i+1)] 
-            den = Dentry(bf)
-            if den.is_valid:
-                c_node = Node(den)
-                c.append(c_node)
-        node.node_list = c
-               
-    def search(self, node):
-        for node in node.node_list:
-            if not node.is_valid or node.is_empty:
-                continue
-            elif node.is_dir:
-                print('\nthis is directory')
-                print(node.name)
-                self.save_child(node)
-                self.search(node)
-            elif node.is_file:
-                print('\nthis is file')
-                self.make_file(node)
-            else:
-                print('\ninvalid')
+        root.is_empty = False
+        r_node = self.make_node(root)
+        self.search(root, r_node)
+          
+        self.search_node(r_node)
+        
+    def search_node(self, node): 
+        print('---')
+        for n in node.children:
+            print(f'\n{n.full_path}') 
+            print(hex(len(n.data))) # 데이터 잘 저장됨
+            if n.is_dir:
+                self.search_node(n)    
+            
+    def search(self, den, node):
+        p_den = den
+        p_node = node
+        if p_den.is_dir:
+            offs = self.br.to_physical_offset(p_den.start_cl_no)
+            while True: # 자식 탐색
+                self.file.seek(offs) 
+                bf = self.file.read(0x20)
+                offs += 0x20
+                den = Dentry(bf)
+                if den.is_empty: break
+                if den.is_valid:
+                    c_node = self.make_node(den, p_node)
+                    p_node.children.append(c_node)
+                    self.search(den, c_node)
+
+    def make_node(self, den, p_node=None): 
+        node = Node(den.name, den.is_dir)
+     
+        if p_node is None:
+            node.full_path = node.name
+            return node
+        elif p_node.full_path=='/':
+            node.full_path = p_node.full_path + node.name
+        else:
+            node.full_path = p_node.full_path +'/'+ node.name    
+          
+        node.creation_time = den.creation_time 
+        node.lastwritten_time = den.lastwritten_time
+        node.size = den.size
+        
+        if not node.is_dir: # 파일이면 data 추가 
+            clusters = self.fat.get_clusters(den.start_cl_no) 
+            fcontent = self.gather(clusters)
+            node.data = fcontent[:den.size]
+            
+        return node
 
     def make_file(self, den):
         clusters = self.fat.get_clusters(den.start_cl_no) 
@@ -63,12 +85,12 @@ class FAT32:
         f.close()
         print(den.name)
             
-    def gather(self, clusters): # 실제 데이터에 접근하고 합친다.
-        out = b''   
+    def gather(self, clusters): 
+        out = b''
         for i in range(len(clusters)):
             offs = self.br.to_physical_offset(clusters[i])
             size = 0x1000
-            if i == len(clusters) - 1: # 마지막 클러스터일 때는 0x1000보다 덜 읽어온다.
+            if i == len(clusters) - 1: 
                 size = self.block_size(offs) 
             self.file.seek(offs)
             block = self.file.read(size)
