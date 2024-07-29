@@ -3,10 +3,11 @@ from br import *
 from fat_area import *
 from dentry import *
 from node import *
+from lfn import *
 
 class FAT32:
     def __init__(self): 
-        path = '../fat/FAT32_simple.mdf'
+        path = '../fat/FAT32_simple.mdf' 
         self.file = open(path, 'rb')
         
         # bootrecord
@@ -36,24 +37,31 @@ class FAT32:
             print(f'\n{n.full_path}') 
             print(hex(len(n.data))) # 데이터 잘 저장됨
             if n.is_dir:
-                self.search_node(n)    
-            
+                self.search_node(n)   
+        print('---') 
+                
     def search(self, den, node):
-        p_den = den
-        p_node = node
-        if p_den.is_dir:
-            offs = self.br.to_physical_offset(p_den.start_cl_no)
-            while True: # 자식 탐색
-                self.file.seek(offs) 
-                bf = self.file.read(0x20)
-                offs += 0x20
-                den = Dentry(bf)
-                if den.is_empty: break
-                if den.is_valid:
-                    c_node = self.make_node(den, p_node)
-                    p_node.children.append(c_node)
-                    self.search(den, c_node)
-
+        if not den.is_dir: return
+        p_den, p_node = den, node
+        offs = self.br.to_physical_offset(p_den.start_cl_no)
+        while True: # 자식 탐색
+            self.file.seek(offs)
+            bf = self.file.read(0x20)
+            offs += 0x20
+            den = Dentry(bf) 
+            if den.is_empty: break
+            if den.is_lfn:
+                self.file.seek(offs)
+                bf = bf + self.file.read(0x20 * den.lfncnt)
+                offs += 0x20 * den.lfncnt
+                lfn = LFN(bf)
+                den = lfn.get_dentry()
+            elif not den.is_valid: continue
+            if den.is_valid:
+                c_node = self.make_node(den, p_node)
+                p_node.children.append(c_node)
+                self.search(den, c_node)
+                   
     def make_node(self, den, p_node=None): 
         node = Node(den.name, den.is_dir)
      

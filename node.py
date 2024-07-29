@@ -12,6 +12,4 @@ class Node:
         self.is_hidden = False
         self.full_path = ''
         self.data = b''
-        
-        
-        
+    
