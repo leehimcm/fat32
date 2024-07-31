@@ -13,26 +13,19 @@ class LFN:
         self.den = Dentry(bf[-0x20:])
         self.den.name = name
         
-    def lfname(self, i):
+    def lfname(self, i): # 디코딩 에러 수정하기
         offs = i * 0x20
-        n1, n2, n3, n4 = '','','',''
         
         self.bb.offset = 0x01 + offs
-        for _ in range(5):
-            n1 += self.bb.get_ascii()
+        n1 = self.bb.get_utf16_le(5).rstrip('\uffff')
           
         self.bb.offset = 0x0e + offs   
-        for _ in range(1):
-            n2 += self.bb.get_ascii()
-            
-        self.bb.offset = 0x10 + offs
-        for _ in range(5):
-            n3 += self.bb.get_ascii()
+        n2 = self.bb.get_utf16_le(6).rstrip('\uffff')
             
         self.bb.offset = 0x1c + offs
-        for _ in range(2):
-            n4 += self.bb.get_ascii()
-        return n1+n2+n3+n4
+        n3 = self.bb.get_utf16_le(2).rstrip('\uffff')
+        
+        return (n1+n2+n3).replace('\x00','')
     
     def get_dentry(self):
         return self.den
