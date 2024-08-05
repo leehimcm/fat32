@@ -11,5 +11,11 @@ class Node:
         self.is_dir = isdir # 파일, 디렉토리 구분
         self.is_hidden = False
         self.full_path = ''
-        self.data = b''
+        self.stream = None
+        
+    def export_to(self, path):
+        self.stream.seek(0) 
+        content = self.stream.read(self.size)
+        f = open(path, "wb")
+        f.write(content)
     

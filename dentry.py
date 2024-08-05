@@ -16,6 +16,14 @@ class Dentry:
         self.bb.offset = 0x00
         self.fname = self.bb.get_ascii(8).rstrip()
         
+        if self.fname=="?":
+            s = ""
+            self.bb.offset = 0x00
+            for _ in range(8):
+                s += self.bb.get_ascii(1)
+            self.fname = s.rstrip()    
+        
+        
         self.set_type()
         if not self.is_valid or self.is_empty:
             return
@@ -27,7 +35,7 @@ class Dentry:
         
         # exten 0x8~a (3)
         self.bb.offset = 0x08
-        self.exten = self.bb.get_ascii(3) .rstrip()
+        self.exten = self.bb.get_ascii(3).rstrip()
         
         self.name = self.fname
         if len(self.exten) > 0:
@@ -92,7 +100,7 @@ def print_dentry(file, addr):
         print(d1.lastwritten_time)
 
 if __name__ == "__main__":
-    path = '../fat/FAT32_simple.mdf' 
+    path = 'fat/FAT32_simple.mdf' 
     file = open(path, 'rb')
-    print_dentry(file, 0x4010a0)
+    print_dentry(file, 0x4000a0)
     
