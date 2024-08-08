@@ -8,35 +8,39 @@ class Stream:
     def __init__(self, file, extents, offset=0):
         self.file = file 
         self.extents = extents
-        self.offs = offset
+        self.offset = offset
         
     def read(self, to_read): 
         out = b''
-        remain = to_read
-        so, eo = 0, 0   # start offset, end offset
-        for e in self.extents:
-            if self.offs > e.start:
+        remained = to_read
+        cursor = 0   
+        
+        for ext in self.extents:
+            
+            cursor += ext.size
+            if self.offset > cursor:
                 continue
             
-            so = e.start if self.offs==0 else e.start + self.offs 
-            self.offs = 0
-            eo = e.size if remain > e.size else remain
+            so = ext.start + self.offset - (cursor - ext.size)
+            chunk_size = min(remained, ext.size - (so - ext.start))
             
             self.file.seek(so)
-            chunk = self.file.read(eo)
+            chunk = self.file.read(chunk_size)
+            
+            self.offset += chunk_size
+            remained -= chunk_size
             out += chunk
                     
-            remain -= eo
-            if remain <= 0: return out
+            if remained <= 0: return out
         
-    def seek(self, offs):
-        self.offs = offs    
+    def seek(self, offset): 
+        self.offset = offset    
       
 if __name__ == "__main__":
     
     Extent = namedtuple('Extent', ['start', 'size'])  
     
-    path = '../fat/FAT32_simple.mdf'
+    path = 'fat/FAT32_simple.mdf'
     file = open(path, 'rb') 
     
     # bootRecord
@@ -48,7 +52,8 @@ if __name__ == "__main__":
     
     # # dentry
     # extents = [Extent(0x400000, 0xb0)]  
-    # s = Stream(file, extents, 0x80)
+    # s = Stream(file, extents)
+    # s.seek(0x80)
     # bf = s.read(0x20)
     # den = Dentry(bf)
     # print(den.name)
